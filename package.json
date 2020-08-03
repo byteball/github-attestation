@@ -1,0 +1,18 @@
+{
+	"name": "github-attestation",
+	"version": "1.0.0",
+	"description": "An Obyte bot for attestation of Github username",
+	"main": "attestation.js",
+	"repository": "https://github.com/byteball/github-attestation.git",
+	"license": "MIT",
+	"dependencies": {
+		"@octokit/auth-oauth-app": "3.0.5",
+		"body-parser": "1.18.3",
+		"cookie-parser": "1.4.3",
+		"express": "4.16.2",
+		"headless-obyte": "git+https://github.com/byteball/headless-obyte.git",
+		"obyte-witness": "git+https://github.com/byteball/obyte-witness.git",
+		"ocore": "git+https://github.com/byteball/ocore.git",
+		"request": "2.83.0"
+	}
+}
