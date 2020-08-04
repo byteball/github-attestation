@@ -14,6 +14,9 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const request = require('request');
+const path = require('path');
+
+const pairingProtocol = process.env.testnet ? 'obyte-tn:' : 'obyte:';
 
 const auth = createOAuthAppAuth({
 	clientId: conf.GithubClientId,
@@ -32,8 +35,24 @@ function startWebServer(){
 	app.use(cookieParser());
 	app.use(bodyParser.urlencoded({ extended: false }));
 
-	app.get('/', (req, res) => {
-		return res.redirect('https://obyte.org');
+	// view engine setup
+	app.set('views', path.join(__dirname, 'views'));
+	app.set('view engine', 'ejs');
+
+	app.get('/', async (req, res) => {
+		let device = require('ocore/device.js');
+		let arrAttestations = await db.query(`SELECT user_address, github_username, attestation_unit, attestation_date
+			FROM receiving_addresses
+			JOIN transactions USING (receiving_address)
+			JOIN attestation_units USING (transaction_id)
+			WHERE post_publicly = 1
+			ORDER BY attestation_units.rowid DESC;`
+		);
+		let pairWithBot = pairingProtocol + device.getMyDevicePubKey()+"@"+conf.hub+"#"+conf.permanent_pairing_secret;
+		res.render('index.ejs', {
+			arrAttestations,
+			pairWithBot,
+		});
 	});
 	app.get('/login', (req, res) => {
 		return res.redirect('https://github.com/login/oauth/authorize?client_id='+ conf.GithubClientId +'&scope=&state='+ encodeURIComponent(req.query.state));

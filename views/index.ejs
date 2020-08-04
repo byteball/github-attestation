@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>GitHub attestations</title>
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" />
+	<link rel="stylesheet" href="https://cdn.datatables.net/1.10.19/css/dataTables.bootstrap.min.css" />
+	<link rel="icon" type="image/png" sizes="192x192"  href="https://obyte.org/static/android-icon-192x192.png">
+	<style>
+		body {margin: 15px}
+		table, tr, td, th {border: 1px solid gray}
+		th {text-align: center}
+		td, th {padding: 4px}
+		tr:nth-of-type(odd) {background-color:#eee}
+		.center {text-align: center}
+		.right {text-align: right}
+		table.dataTable {width:auto;}
+		div.dataTables_wrapper div.dataTables_filter,
+		div.dataTables_wrapper div.dataTables_paginate,
+		div.dataTables_wrapper div.dataTables_info {
+			text-align:left;
+		}
+		.monospace {
+			font-family: SFMono-Regular,Consolas,Liberation Mono,Menlo,monospace;
+		}
+	</style>
+</head>
+<body>
+<h1>GitHub attestations</h1>
+<ol>
+	<li><a href="https://obyte.org/#download" target="_blank">Download O<sub>byte</sub> wallet</a></li>
+	<li><a href="<%= pairWithBot %>">Pair with GitHub attestation bot</a></li>
+</ol>
+<table id="participants" class="table table-striped table-bordered table-responsive">
+	<thead>
+		<tr>
+			<th>Attestation unit</th>
+			<th>O<sub>byte</sub> address</th>
+			<th>GitHub username</th>
+			<th>Attestation date</th>
+		</tr>
+	</thead>
+	<tbody>
+		<% for(var k in arrAttestations) {%>
+		<tr>
+			<td class="monospace"><a href="https://<%= process.env.testnet ? 'testnet' : '' %>explorer.obyte.org/#<%= arrAttestations[k].attestation_unit %>" target="_blank"><%= arrAttestations[k].attestation_unit %></a></td>
+			<td class="monospace"><a href="https://<%= process.env.testnet ? 'testnet' : '' %>explorer.obyte.org/#<%= arrAttestations[k].user_address %>" target="_blank"><%= arrAttestations[k].user_address %></a></td>
+			<td><a href="https://github.com/<%= arrAttestations[k].github_username %>" target="_blank"><%= arrAttestations[k].github_username %></a></td>
+			<td><%= arrAttestations[k].attestation_date %></td>
+		</tr>
+		<% } %>
+	</tbody>
+</table>
+<script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+<script src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.10.19/js/dataTables.bootstrap.min.js"></script>
+<script>
+$(document).ready(function() {
+	$('#participants').DataTable({
+		"dom": 'ftpi',
+		"aaSorting": [],
+		'bAutoWidth': false,
+		"bLengthChange": false,
+		"pageLength": 100
+	});
+});
+</script>
+</body>
+</html>
