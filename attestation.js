@@ -91,7 +91,7 @@ function startWebServer(){
 					console.error(err);
 					return res.send("failed to get your GitHub profile");
 				}
-				let github_id = meResult.id;
+				let github_id = meResult.node_id;
 				let github_username = meResult.login;
 				await db.query("UPDATE users SET github_id=?, github_username=? WHERE device_address=?", [github_id, github_username, userInfo.device_address]);
 				userInfo.github_id = github_id;
