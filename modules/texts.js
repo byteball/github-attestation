@@ -12,15 +12,14 @@ exports.greeting = () => {
 
 		"Your GitHub username will be linked to your Obyte address, the link can be either made public (if you choose so) or saved privately in your wallet. ",
 		"In the latter case, only a proof of attestation will be posted publicly on the distributed ledger. ",
-		"\n\n",
 
-		conf.bAllowProofByPayment ? `The price of attestation is ${conf.priceInBytes/1e9} GB. The payment is nonrefundable even if the attestation fails for any reason.\n\n` : '',
+		conf.bAllowProofByPayment ? `\n\nThe price of attestation is ${conf.priceInBytes/1e9} GB. The payment is nonrefundable even if the attestation fails for any reason.` : '',
 	].join('');
 };
 
 exports.insertMyAddress = () => {
 	return [
-		"Please send me your address that you wish to attest (click ... and Insert my address).\n",
+		"Please send me your address that you wish to attest (click ... and Insert my address).\n\n",
 		"Make sure you are in a single-address wallet. ",
 		"If you don't have a single-address wallet, ",
 		"please add one (burger menu, add wallet) and fund it with the amount sufficient to pay for the attestation."

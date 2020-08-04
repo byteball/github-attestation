@@ -43,7 +43,7 @@ exports.priceInBytes = 49000;
 exports.bAllowProofByPayment = false;
 exports.bAcceptUnconfirmedPayments = true;
 
-exports.site = 'https://github.obyte.org';
+exports.site = 'https://devid.org';
 
 // Github
 exports.GithubClientId = '';
