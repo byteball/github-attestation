@@ -14,6 +14,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const request = require('request');
+const path = require('path');
 
 const auth = createOAuthAppAuth({
 	clientId: conf.GithubClientId,
@@ -32,8 +33,21 @@ function startWebServer(){
 	app.use(cookieParser());
 	app.use(bodyParser.urlencoded({ extended: false }));
 
-	app.get('/', (req, res) => {
-		return res.redirect('https://obyte.org');
+	// view engine setup
+	app.set('views', path.join(__dirname, 'views'));
+	app.set('view engine', 'ejs');
+
+	app.get('/', async (req, res) => {
+		let objAddresses = await db.query(`SELECT re.user_address, re.github_username, au.attestation_unit, au.attestation_date
+			FROM receiving_addresses AS re
+			JOIN transactions as t ON re.receiving_address = t.receiving_address
+			JOIN attestation_units AS au ON au.transaction_id = t.transaction_id
+			WHERE re.post_publicly = 1
+			ORDER BY au.rowid DESC;`
+		);
+		res.render('index.ejs', {
+			objAddresses
+		});
 	});
 	app.get('/login', (req, res) => {
 		return res.redirect('https://github.com/login/oauth/authorize?client_id='+ conf.GithubClientId +'&scope=&state='+ encodeURIComponent(req.query.state));
