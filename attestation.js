@@ -43,7 +43,7 @@ function startWebServer(){
 		let device = require('ocore/device.js');
 		let objAddresses = await db.query(`SELECT user_address, github_username, attestation_unit, attestation_date
 			FROM receiving_addresses
-			JOIN transactions as tx USING (receiving_address)
+			JOIN transactions USING (receiving_address)
 			JOIN attestation_units USING (transaction_id)
 			WHERE post_publicly = 1
 			ORDER BY attestation_units.rowid DESC;`
