@@ -16,6 +16,8 @@ const cookieParser = require('cookie-parser');
 const request = require('request');
 const path = require('path');
 
+const pairingProtocol = process.env.testnet ? 'obyte-tn:' : 'obyte:';
+
 const auth = createOAuthAppAuth({
 	clientId: conf.GithubClientId,
 	clientSecret: conf.GithubClientSecret
@@ -38,6 +40,7 @@ function startWebServer(){
 	app.set('view engine', 'ejs');
 
 	app.get('/', async (req, res) => {
+		let device = require('ocore/device.js');
 		let objAddresses = await db.query(`SELECT user_address, github_username, attestation_unit, attestation_date
 			FROM receiving_addresses
 			JOIN transactions as tx USING (receiving_address)
@@ -45,8 +48,10 @@ function startWebServer(){
 			WHERE post_publicly = 1
 			ORDER BY attestation_units.rowid DESC;`
 		);
+		let pairWithBot = pairingProtocol + device.getMyDevicePubKey()+"@"+conf.hub+"#"+conf.permanent_pairing_secret;
 		res.render('index.ejs', {
-			objAddresses
+			objAddresses,
+			pairWithBot,
 		});
 	});
 	app.get('/login', (req, res) => {
