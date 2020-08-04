@@ -41,7 +41,7 @@ function startWebServer(){
 
 	app.get('/', async (req, res) => {
 		let device = require('ocore/device.js');
-		let objAddresses = await db.query(`SELECT user_address, github_username, attestation_unit, attestation_date
+		let arrAttestations = await db.query(`SELECT user_address, github_username, attestation_unit, attestation_date
 			FROM receiving_addresses
 			JOIN transactions USING (receiving_address)
 			JOIN attestation_units USING (transaction_id)
@@ -50,7 +50,7 @@ function startWebServer(){
 		);
 		let pairWithBot = pairingProtocol + device.getMyDevicePubKey()+"@"+conf.hub+"#"+conf.permanent_pairing_secret;
 		res.render('index.ejs', {
-			objAddresses,
+			arrAttestations,
 			pairWithBot,
 		});
 	});

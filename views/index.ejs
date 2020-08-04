@@ -41,12 +41,12 @@
 		</tr>
 	</thead>
 	<tbody>
-		<% for(var k in objAddresses) {%>
+		<% for(var k in arrAttestations) {%>
 		<tr>
-			<td class="monospace"><a href="https://<%= process.env.testnet ? 'testnet' : '' %>explorer.obyte.org/#<%= objAddresses[k].attestation_unit %>" target="_blank"><%= objAddresses[k].attestation_unit %></a></td>
-			<td class="monospace"><a href="https://<%= process.env.testnet ? 'testnet' : '' %>explorer.obyte.org/#<%= objAddresses[k].user_address %>" target="_blank"><%= objAddresses[k].user_address %></a></td>
-			<td><a href="https://github.com/<%= objAddresses[k].github_username %>" target="_blank"><%= objAddresses[k].github_username %></a></td>
-			<td><%= objAddresses[k].attestation_date %></td>
+			<td class="monospace"><a href="https://<%= process.env.testnet ? 'testnet' : '' %>explorer.obyte.org/#<%= arrAttestations[k].attestation_unit %>" target="_blank"><%= arrAttestations[k].attestation_unit %></a></td>
+			<td class="monospace"><a href="https://<%= process.env.testnet ? 'testnet' : '' %>explorer.obyte.org/#<%= arrAttestations[k].user_address %>" target="_blank"><%= arrAttestations[k].user_address %></a></td>
+			<td><a href="https://github.com/<%= arrAttestations[k].github_username %>" target="_blank"><%= arrAttestations[k].github_username %></a></td>
+			<td><%= arrAttestations[k].attestation_date %></td>
 		</tr>
 		<% } %>
 	</tbody>
