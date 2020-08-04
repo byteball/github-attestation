@@ -38,12 +38,12 @@ function startWebServer(){
 	app.set('view engine', 'ejs');
 
 	app.get('/', async (req, res) => {
-		let objAddresses = await db.query(`SELECT re.user_address, re.github_username, au.attestation_unit, au.attestation_date
-			FROM receiving_addresses AS re
-			JOIN transactions as t ON re.receiving_address = t.receiving_address
-			JOIN attestation_units AS au ON au.transaction_id = t.transaction_id
-			WHERE re.post_publicly = 1
-			ORDER BY au.rowid DESC;`
+		let objAddresses = await db.query(`SELECT user_address, github_username, attestation_unit, attestation_date
+			FROM receiving_addresses
+			JOIN transactions as tx USING (receiving_address)
+			JOIN attestation_units USING (transaction_id)
+			WHERE post_publicly = 1
+			ORDER BY attestation_units.rowid DESC;`
 		);
 		res.render('index.ejs', {
 			objAddresses
