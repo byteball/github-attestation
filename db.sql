@@ -2,8 +2,9 @@ CREATE TABLE users (
 	device_address CHAR(33) NOT NULL PRIMARY KEY,
 	unique_id CHAR(32) NOT NULL UNIQUE,
 	user_address CHAR(32) NULL,
-	github_id VARCHAR(32) NULL,
-	github_username VARCHAR(64) NULL,
+	github_id VARCHAR(36) NULL,
+	github_username VARCHAR(40) NULL,
+	github_options TEXT NOT NULL,
 	creation_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	FOREIGN KEY (device_address) REFERENCES correspondent_devices(device_address)
 );
@@ -12,8 +13,8 @@ CREATE TABLE receiving_addresses (
 	receiving_address CHAR(32) NOT NULL PRIMARY KEY,
 	device_address CHAR(33) NOT NULL,
 	user_address CHAR(32) NOT NULL,
-	github_id VARCHAR(32) NOT NULL,
-	github_username VARCHAR(64) NOT NULL,
+	github_id VARCHAR(36) NOT NULL,
+	github_username VARCHAR(40) NOT NULL,
 	creation_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	post_publicly TINYINT NULL,
 	price INT NULL,
@@ -66,12 +67,15 @@ CREATE TABLE rejected_payments (
 CREATE TABLE signed_messages (
 	transaction_id INTEGER NOT NULL PRIMARY KEY,
 	user_address CHAR(32) NOT NULL,
+	github_username VARCHAR(40) NOT NULL,
 	signed_message TEXT NOT NULL,
 	creation_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	FOREIGN KEY (transaction_id) REFERENCES transactions(transaction_id)
 );
 -- query separator
 CREATE INDEX sm_byUserAddress ON signed_messages(user_address);
+-- query separator
+CREATE INDEX sm_byGithubUsername ON signed_messages(github_username);
 -- query separator
 CREATE TABLE attestation_units (
 	transaction_id INTEGER NOT NULL,

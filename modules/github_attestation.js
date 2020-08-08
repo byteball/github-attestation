@@ -152,7 +152,7 @@ function getUserId(profile){
 
 function getAttestationPayloadAndSrcProfile(user_address, github_id, github_username, bPublic) {
 	let profile = {
-		github_username: String(github_username),
+		github_username: String(github_username).toLowerCase(),
 		github_id: String(github_id),
 	};
 	if (bPublic) {
