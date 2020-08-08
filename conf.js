@@ -42,6 +42,7 @@ exports.MIN_AVAILABLE_WITNESSINGS = 100;
 exports.priceInBytes = 49000;
 exports.bAllowProofByPayment = false;
 exports.bAcceptUnconfirmedPayments = true;
+exports.fetchOrganizations = true;
 
 exports.site = 'https://devid.org';
 

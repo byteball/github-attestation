@@ -15,6 +15,7 @@ const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const request = require('request');
 const path = require('path');
+const util = require('util');
 
 const pairingProtocol = process.env.testnet ? 'obyte-tn:' : 'obyte:';
 
@@ -26,6 +27,11 @@ const auth = createOAuthAppAuth({
 function getLoginURL(state) {
 	// WORKAROUND: chat only works with URLs with one parameter
 	return conf.site + '/login?state='+ state;
+}
+
+function getLoginRedirectURL(state, fetchOrganizations) {
+	let scope = fetchOrganizations ? 'read:org' : '';
+	return 'https://github.com/login/oauth/authorize?client_id='+ conf.GithubClientId +'&scope='+ scope +'&state='+ encodeURIComponent(state);
 }
 
 function startWebServer(){
@@ -41,7 +47,7 @@ function startWebServer(){
 
 	app.get('/', async (req, res) => {
 		let device = require('ocore/device.js');
-		let arrAttestations = await db.query(`SELECT user_address, github_username, attestation_unit, attestation_date
+		let arrAttestations = await db.query(`SELECT user_address, github_id, github_username, attestation_unit, attestation_date
 			FROM receiving_addresses
 			JOIN transactions USING (receiving_address)
 			JOIN attestation_units USING (transaction_id)
@@ -52,67 +58,112 @@ function startWebServer(){
 		res.render('index.ejs', {
 			arrAttestations,
 			pairWithBot,
+			pairingProtocol,
+			atob: (a) => {return new Buffer.from(String(a), 'base64').toString('utf8') || ''},
 		});
 	});
+	app.get('/login-user', (req, res) => {
+		return res.redirect(getLoginRedirectURL(req.query.state, false));
+	});
 	app.get('/login', (req, res) => {
-		return res.redirect('https://github.com/login/oauth/authorize?client_id='+ conf.GithubClientId +'&scope=&state='+ encodeURIComponent(req.query.state));
+		return res.redirect(getLoginRedirectURL(req.query.state, conf.fetchOrganizations));
 	});
 	app.get('/done', async (req, res) => {
 		let device = require('ocore/device.js');
 		let query = req.query;
 		console.error('received request', query);
 		if (!query.code || !query.state)
-			return res.send("no code or unique_id");
+			return res.render('done.ejs', {
+				'message': texts.invalidSessionParams()
+			});
 		let rows = await db.query("SELECT device_address, user_address FROM users WHERE unique_id=?", [query.state]);
 		if (rows.length === 0)
-			return res.send("no such unique_id");		
+			return res.render('done.ejs', {
+				'message': texts.expiredSessionParams()
+			});
 		let userInfo = rows[0];
 		if (!userInfo.user_address){
 			device.sendMessageToDevice(userInfo.device_address, 'text', texts.insertMyAddress());
-			return res.send("Please return to chat, insert your address, and try again");
+			return res.render('done.ejs', {
+				'message': texts.returnChatInsertAddressAgain()
+			});
 		}
+		let requestWithAuth;
+		let meResult;
 		try {
 			const { token } = await auth({
 				type: "token",
 				code: query.code,
 				state: query.state,
 			});
-			const requestWithAuth = request.defaults({
-				baseUrl: 'https://api.github.com',
-				json: true,
-				headers: {
-					'User-Agent': conf.program +' '+ conf.program_version,
-					'Authorization': 'token '+ token,
-				},
-			});
-			requestWithAuth("/user", async function (err, response, meResult) {
-				console.log(meResult);
-				if (err || !meResult.id) {
-					console.error(err);
-					return res.send("failed to get your GitHub profile");
-				}
-				let github_id = meResult.node_id;
-				let github_username = meResult.login;
-				await db.query("UPDATE users SET github_id=?, github_username=? WHERE device_address=?", [github_id, github_username, userInfo.device_address]);
-				userInfo.github_id = github_id;
-				userInfo.github_username = github_username;
-				readOrAssignReceivingAddress(userInfo, (receiving_address, post_publicly) => {
-					let response = "Your GitHub username is "+github_username+".\n\n";
-					let challenge = github_username + ' ' + userInfo.user_address;
-					if (post_publicly === null)
-						response += texts.privateOrPublic();
-					else
-						response += texts.pleasePay(receiving_address, conf.priceInBytes, challenge) + '\n\n' +
-							((post_publicly === 0) ? texts.privateChosen() : texts.publicChosen(userInfo.github_username));
-					device.sendMessageToDevice(userInfo.device_address, 'text', response);
-				});
-				res.sendFile(__dirname+'/done.html');
-			});
+			requestWithAuth = util.promisify(
+				request.defaults({
+					baseUrl: 'https://api.github.com',
+					json: true,
+					headers: {
+						'User-Agent': conf.program +' '+ conf.program_version,
+						'Authorization': 'token '+ token,
+					},
+				})
+			);
+			meResult = await requestWithAuth("/user");
 		}
 		catch (err) {
 			console.error(err);
-			return res.send("failed to get your GitHub profile");
+			return res.render('done.ejs', {
+				'message': texts.failedAuthentication()
+			});
 		}
+		let attest_options = [{
+			node_id: meResult.body.node_id,
+			login: meResult.body.login,
+			type: meResult.body.type
+		}];
+		if (conf.fetchOrganizations) {
+			try {
+				const orgsResult = await requestWithAuth("/user/orgs");
+				if (orgsResult.body && Array.isArray(orgsResult.body)) {
+					orgsResult.body.forEach((item) => {
+						attest_options.push({
+							node_id: item.node_id,
+							login: item.login,
+							type: 'Organization'
+						});
+					});
+				}
+				//console.log(attest_options);
+			}
+			catch (err) {
+				console.error(err);
+				// ignore if fails to get organizations
+			}
+		}
+
+		userInfo.github_id = meResult.body.node_id;
+		userInfo.github_username = meResult.body.login;
+		userInfo.github_options = attest_options;
+		await db.query("UPDATE users SET github_id = ?, github_username = ?, github_options = ?, unique_id = ? WHERE device_address = ?", [
+			userInfo.github_id,
+			userInfo.github_username,
+			JSON.stringify(attest_options),
+			'', // reset once used
+			userInfo.device_address
+		]);
+		readOrAssignReceivingAddress(userInfo, (receiving_address, post_publicly) => {
+			let response = attestationOptions(userInfo) +'\n\n';
+			let challenge = userInfo.github_username + ' ' + userInfo.user_address;
+			if (post_publicly === null) {
+				response += texts.privateOrPublic();
+			}
+			else {
+				response += texts.pleasePay(receiving_address, conf.priceInBytes, userInfo.user_address, challenge) + '\n\n' +
+					((post_publicly === 0) ? texts.privateChosen() : texts.publicChosen(userInfo.github_username));
+			}
+			device.sendMessageToDevice(userInfo.device_address, 'text', response);
+		});
+		res.render('done.ejs', {
+			'message': '<font color="green">'+ texts.gotYourUsername() +'</font><br>' + texts.closeThisWindow()
+		});
 	});
 
 	server.listen(conf.webPort, () => {
@@ -324,7 +375,7 @@ function checkPayment(row, onDone) {
 	if (row.amount < conf.priceInBytes) {
 		let text = `Received ${row.amount} Bytes from you, which is less than the expected ${conf.priceInBytes} Bytes.`;
 		let challenge = row.github_username + ' ' + row.user_address;
-		return onDone(text + '\n\n' + texts.pleasePay(row.receiving_address, conf.priceInBytes, challenge));
+		return onDone(text + '\n\n' + texts.pleasePay(row.receiving_address, conf.priceInBytes, row.user_address, challenge));
 	}
 
 	function resetUserAddress(){
@@ -431,9 +482,26 @@ function respond(from_address, text, response = '') {
 			onDone(texts.insertMyAddress());
 		}
 
-		function checkUsername(onDone) {
-			if (userInfo.github_username)
+		async function checkUsername(onDone) {
+			if (userInfo.github_username) {
+				let commands = text.split(' ');
+				if (commands.length > 1 && commands[0] === 'choose') {
+					for (var i = 0; i < userInfo.github_options.length; i++) {
+						let option = userInfo.github_options[i];
+						if (option.login === commands[1]) {
+							userInfo.github_id = option.node_id;
+							userInfo.github_username = option.login;
+							await db.query("UPDATE users SET github_id = ?, github_username = ? WHERE device_address = ?", [
+								userInfo.github_id,
+								userInfo.github_username,
+								userInfo.device_address
+							]);
+							break;
+						}
+					}
+				}
 				return onDone();
+			}
 			let link = getLoginURL(userInfo.unique_id);
 			onDone(texts.proveUsername(link));
 		}
@@ -442,11 +510,16 @@ function respond(from_address, text, response = '') {
 			if (userAddressResponse)
 				return device.sendMessageToDevice(from_address, 'text', (response ? response + '\n\n' : '') + userAddressResponse);
 
+			if (text === 'again') {
+				let link = getLoginURL(userInfo.unique_id);
+				return device.sendMessageToDevice( from_address, 'text', (response ? response + '\n\n' : '') + texts.proveUsername(link) );
+			}
+
 			checkUsername((usernameResponse) => {
 				if (usernameResponse)
 					return device.sendMessageToDevice(from_address, 'text', (response ? response + '\n\n' : '') + usernameResponse);
 
-				readOrAssignReceivingAddress(userInfo, (receiving_address, post_publicly) => {
+				readOrAssignReceivingAddress(userInfo, async (receiving_address, post_publicly) => {
 					let price = conf.priceInBytes;
 
 					if (text === 'private' || text === 'public') {
@@ -459,15 +532,14 @@ function respond(from_address, text, response = '') {
 						);
 						response += (text === "private") ? texts.privateChosen() : texts.publicChosen(userInfo.github_username);
 					}
+					else {
+						response += attestationOptions(userInfo);
+					}
 
 					if (post_publicly === null)
 						return device.sendMessageToDevice(from_address, 'text', (response ? response + '\n\n' : '') + texts.privateOrPublic());
 
 					let challenge = userInfo.github_username + ' ' + userInfo.user_address;
-					if (text === 'again') {
-						let link = getLoginURL(userInfo.unique_id);
-						return device.sendMessageToDevice( from_address, 'text', (response ? response + '\n\n' : '') + texts.proveUsername(link) );
-					}
 
 					// handle signed message
 					let arrSignedMessageMatches = text.match(/\(signed-message:(.+?)\)/);
@@ -482,92 +554,73 @@ function respond(from_address, text, response = '') {
 						catch(e){
 							return null;
 						}
-						validation.validateSignedMessage(objSignedMessage, err => {
+						validation.validateSignedMessage(objSignedMessage, async (err) => {
 							if (err)
 								return device.sendMessageToDevice(from_address, 'text', err);
 							if (objSignedMessage.signed_message !== challenge)
 								return device.sendMessageToDevice(from_address, 'text', "You signed a wrong message: "+objSignedMessage.signed_message+", expected: "+challenge);
 							if (objSignedMessage.authors[0].address !== userInfo.user_address)
 								return device.sendMessageToDevice(from_address, 'text', "You signed the message with a wrong address: "+objSignedMessage.authors[0].address+", expected: "+userInfo.user_address);
-							db.query(
-								"SELECT 1 FROM signed_messages WHERE user_address=? AND creation_date>"+db.addTime('-1 DAY'), 
-								[userInfo.user_address],
-								rows => {
-									if (rows.length > 0)
-										return device.sendMessageToDevice(from_address, 'text', "You are already attested.");
-									db.query(
-										`INSERT INTO transactions (receiving_address, proof_type) VALUES (?, 'signature')`, 
-										[receiving_address],
-										(res) => {
-											let transaction_id = res.insertId;
-											db.query(
-												`INSERT INTO signed_messages (transaction_id, user_address, signed_message) VALUES (?,?,?)`,
-												[transaction_id, userInfo.user_address, signedMessageJson],
-												() => {
-													db.query(
-														`SELECT device_address, user_address, github_id, github_username, post_publicly
-														FROM receiving_addresses WHERE receiving_address=?`,
-														[receiving_address],
-														rows => {
-															let row = rows[0];
-															if (!row)
-																throw Error("no receiving address "+receiving_address);
-															row.transaction_id = transaction_id;
-															attest(row, 'signature');
-														}
-													);
-												}
-											);
-										}
-									);
-								}
-							);
+
+							let signed = await db.query("SELECT 1 FROM signed_messages WHERE user_address=? AND github_username=? AND creation_date>"+db.addTime('-1 DAY'), [userInfo.user_address, userInfo.github_username]);
+							if (signed.length > 0)
+								return device.sendMessageToDevice(from_address, 'text', "You are already attested.");
+
+							let res = await db.query(`INSERT INTO transactions (receiving_address, proof_type) VALUES (?, 'signature')`, [receiving_address]);
+							let transaction_id = res.insertId;
+
+							await db.query(`INSERT INTO signed_messages (transaction_id, user_address, github_username, signed_message) VALUES (?,?,?,?)`, [transaction_id, userInfo.user_address, userInfo.github_username, signedMessageJson]);
+
+							let rows = await db.query(`SELECT device_address, user_address, github_id, github_username, post_publicly FROM receiving_addresses WHERE receiving_address=?`, [receiving_address]);
+							let row = rows[0];
+							if (!row)
+								throw Error("no receiving address "+receiving_address);
+							row.transaction_id = transaction_id;
+							attest(row, 'signature');
 						});
 						return;
 					}
 					
-					db.query(
+					let rows = await db.query(
 						`SELECT transaction_id, is_confirmed, received_amount, user_address, github_id, github_username, attestation_date
 						FROM accepted_payments
 						JOIN receiving_addresses USING(receiving_address)
 						LEFT JOIN attestation_units USING(transaction_id)
 						WHERE receiving_address=?
 						ORDER BY transaction_id DESC
-						LIMIT 1`,
-						[receiving_address],
-						(rows) => {
-							/**
-							 * if user didn't pay yet
-							 */
-							if (rows.length === 0) {
-								return device.sendMessageToDevice(
-									from_address,
-									'text',
-									(response ? response + '\n\n' : '') + 
-										texts.pleasePayOrPrivacy(receiving_address, price, challenge, post_publicly)
-								);
-							}
-
-							let row = rows[0];
-							let transaction_id = row.transaction_id;
-
-							/**
-							 * if user paid, but transaction did not become stable
-							 */
-							if (row.is_confirmed === 0) {
-								return device.sendMessageToDevice(
-									from_address,
-									'text',
-									(response ? response + '\n\n' : '') + texts.receivedYourPayment(row.received_amount)
-								);
-							}
-
-							if (text === 'private' || text === 'public')
-								return device.sendMessageToDevice(from_address, 'text', response);
-							
-							device.sendMessageToDevice(from_address, 'text', (response ? response + '\n\n' : '') + texts.alreadyAttested(row.attestation_date));
-						}
+						LIMIT 1`, [receiving_address]
 					);
+
+					/**
+					 * if user didn't pay yet
+					 */
+					if (rows.length === 0) {
+						return device.sendMessageToDevice(
+							from_address,
+							'text',
+							(response ? response + '\n\n' : '') + 
+								texts.pleasePayOrPrivacy(receiving_address, price, userInfo.user_address, challenge, post_publicly)
+						);
+					}
+
+					let row = rows[0];
+					let transaction_id = row.transaction_id;
+
+					/**
+					 * if user paid, but transaction did not become stable
+					 */
+					if (row.is_confirmed === 0) {
+						return device.sendMessageToDevice(
+							from_address,
+							'text',
+							(response ? response + '\n\n' : '') + texts.receivedYourPayment(row.received_amount)
+						);
+					}
+
+					if (text === 'private' || text === 'public')
+						return device.sendMessageToDevice(from_address, 'text', response);
+					
+					device.sendMessageToDevice(from_address, 'text', (response ? response + '\n\n' : '') + texts.alreadyAttested(row.attestation_date));
 
 				});
 			});
@@ -575,6 +628,20 @@ function respond(from_address, text, response = '') {
 	});
 }
 
+/**
+ * options for username attestations
+ * @param userInfo
+ */
+function attestationOptions(userInfo) {
+	let response = '';
+	userInfo.github_options.forEach(option => {
+		response += option.login == userInfo.github_username ? '' : '\n* ['+ option.login + '](command:choose '+ option.login + ') ('+ option.type +')';
+	});
+	if (response) {
+		response = '\n\n' + texts.otherOptions(response);
+	}
+	return texts.goingToAttestUsername(userInfo.github_username) + response;
+}
 
 /**
  * get user's information by device address
@@ -582,24 +649,22 @@ function respond(from_address, text, response = '') {
  * @param device_address
  * @param callback
  */
-function readUserInfo(device_address, callback) {
-	db.query(
-		`SELECT users.user_address, receiving_addresses.github_id, receiving_addresses.github_username, unique_id, users.device_address 
-		FROM users LEFT JOIN receiving_addresses USING(device_address, user_address) 
-		WHERE device_address = ?`,
-		[device_address],
-		(rows) => {
-			if (rows.length) {
-				callback(rows[0]);
-			}
-			else {
-				let unique_id = crypto.randomBytes(16).toString("hex"); // 32 chars
-				db.query(`INSERT ${db.getIgnore()} INTO users (device_address, unique_id) VALUES(?,?)`, [device_address, unique_id], () => {
-					callback({unique_id, device_address});
-				});
-			}
+async function readUserInfo(device_address, callback) {
+	let unique_id = crypto.randomBytes(16).toString("hex"); // 32 chars
+	let rows = await db.query(`SELECT * FROM users WHERE device_address = ?;`, [device_address]);
+	if (rows.length) {
+		let userInfo = rows[0];
+		userInfo.github_options = JSON.parse(userInfo.github_options) || [];
+		if (!userInfo.unique_id) {
+			userInfo.unique_id = unique_id; // add new unqiue when previously reset
+			await db.query(`UPDATE users SET unique_id = ? WHERE device_address = ?;`, [userInfo.unique_id, device_address]);
 		}
-	);
+		callback(userInfo);
+	}
+	else {
+		await db.query(`INSERT ${db.getIgnore()} INTO users (device_address, unique_id) VALUES(?,?);`, [device_address, unique_id]);
+		callback({unique_id, device_address});
+	}
 }
 
 /**

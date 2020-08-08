@@ -28,14 +28,18 @@
 <body>
 <h1>GitHub attestations</h1>
 <ol>
-	<li><a href="https://obyte.org/#download" target="_blank">Download O<sub>byte</sub> wallet</a></li>
+	<li><a href="<%= process.env.testnet ? 'https://obyte.org/testnet.html' : 'https://obyte.org/#download' %>" target="_blank">Download O<sub>byte</sub> wallet</a></li>
 	<li><a href="<%= pairWithBot %>">Pair with GitHub attestation bot</a></li>
+	<li>Authenticate with GitHub from chat bot</li>
+	<li>Sign a message to verify O<sub>byte</sub> wallet address</li>
+	<!--<li>Use <i style="background:gray;color:white;padding:2px;">github/USERNAME</i> as alias for O<sub>byte</sub> wallet address</li>-->
 </ol>
 <table id="participants" class="table table-striped table-bordered table-responsive">
 	<thead>
 		<tr>
 			<th>Attestation unit</th>
 			<th>O<sub>byte</sub> address</th>
+			<th>Type</th>
 			<th>GitHub username</th>
 			<th>Attestation date</th>
 		</tr>
@@ -43,9 +47,18 @@
 	<tbody>
 		<% for(var k in arrAttestations) {%>
 		<tr>
-			<td class="monospace"><a href="https://<%= process.env.testnet ? 'testnet' : '' %>explorer.obyte.org/#<%= arrAttestations[k].attestation_unit %>" target="_blank"><%= arrAttestations[k].attestation_unit %></a></td>
-			<td class="monospace"><a href="https://<%= process.env.testnet ? 'testnet' : '' %>explorer.obyte.org/#<%= arrAttestations[k].user_address %>" target="_blank"><%= arrAttestations[k].user_address %></a></td>
-			<td><a href="https://github.com/<%= arrAttestations[k].github_username %>" target="_blank"><%= arrAttestations[k].github_username %></a></td>
+			<td class="monospace">
+				<a href="https://<%= process.env.testnet ? 'testnet' : '' %>explorer.obyte.org/#<%= arrAttestations[k].attestation_unit %>" target="_blank"><%= arrAttestations[k].attestation_unit %></a>
+			</td>
+			<td class="monospace">
+				<a href="https://<%= process.env.testnet ? 'testnet' : '' %>explorer.obyte.org/#<%= arrAttestations[k].user_address %>" target="_blank"><%= arrAttestations[k].user_address %></a>
+				<a href="<%= pairingProtocol + arrAttestations[k].user_address %>" title="Donate"><span class="glyphicon glyphicon-send"></span></a>
+			</td>
+			<td><%= atob(arrAttestations[k].github_id).includes('Organization') ? 'Organization' : 'User' %></td>
+			<td>
+				<!--<a href="<%= pairingProtocol +'github/'+ arrAttestations[k].github_username %>" title="Donate"><span class="glyphicon glyphicon-send"></span></a>-->
+				<a href="https://github.com/<%= arrAttestations[k].github_username %>" target="_blank"><%= arrAttestations[k].github_username %></a>
+			</td>
 			<td><%= arrAttestations[k].attestation_date %></td>
 		</tr>
 		<% } %>
