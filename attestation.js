@@ -654,7 +654,7 @@ async function readUserInfo(device_address, callback) {
 	let rows = await db.query(`SELECT * FROM users WHERE device_address = ?;`, [device_address]);
 	if (rows.length) {
 		let userInfo = rows[0];
-		userInfo.github_options = JSON.parse(userInfo.github_options) || [];
+		userInfo.github_options = userInfo.github_options ? JSON.parse(userInfo.github_options) : [];
 		if (!userInfo.unique_id) {
 			userInfo.unique_id = unique_id; // add new unqiue when previously reset
 			await db.query(`UPDATE users SET unique_id = ? WHERE device_address = ?;`, [userInfo.unique_id, device_address]);
@@ -662,7 +662,7 @@ async function readUserInfo(device_address, callback) {
 		callback(userInfo);
 	}
 	else {
-		await db.query(`INSERT ${db.getIgnore()} INTO users (device_address, unique_id) VALUES(?,?);`, [device_address, unique_id]);
+		await db.query(`INSERT ${db.getIgnore()} INTO users (device_address, unique_id, github_options) VALUES(?,?,?);`, [device_address, unique_id, '']);
 		callback({unique_id, device_address});
 	}
 }
