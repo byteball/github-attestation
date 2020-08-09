@@ -4,7 +4,7 @@ CREATE TABLE users (
 	user_address CHAR(32) NULL,
 	github_id VARCHAR(36) NULL,
 	github_username VARCHAR(40) NULL,
-	github_options TEXT NOT NULL,
+	github_options TEXT NULL,
 	creation_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	FOREIGN KEY (device_address) REFERENCES correspondent_devices(device_address)
 );
