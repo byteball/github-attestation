@@ -2,6 +2,7 @@
 'use strict';
 const desktopApp = require('ocore/desktop_app.js');
 const conf = require('ocore/conf');
+const pairingProtocol = process.env.testnet ? 'obyte-tn:' : 'obyte:';
 
 /**
  * responses for clients
@@ -62,7 +63,7 @@ exports.publicChosen = (username) => {
 
 exports.pleasePay = (receivingAddress, price, user_address, challenge) => {
 	if (conf.bAllowProofByPayment){
-		let text = `Please pay for the attestation: [attestation payment](obyte:${receivingAddress}?amount=${price}&single_address=single${user_address}).\n\nAlternatively, you can prove ownership of your address by signing a message: [message](sign-message-request:${challenge})`;
+		let text = `Please pay for the attestation: [attestation payment](${pairingProtocol}${receivingAddress}?amount=${price}&single_address=single${user_address}).\n\nAlternatively, you can prove ownership of your address by signing a message: [message](sign-message-request:${challenge})`;
 		return text;
 	}
 	else
@@ -70,7 +71,7 @@ exports.pleasePay = (receivingAddress, price, user_address, challenge) => {
 };
 
 exports.pleasePayOrPrivacy = (receivingAddress, price, user_address, challenge, postPublicly) => {
-	return (postPublicly === null) ? exports.privateOrPublic() : exports.pleasePay(receivingAddress, price, user_address, challenge);
+	return (postPublicly === null) ? exports.privateOrPublic() : exports.pleasePay(pairingProtocol, receivingAddress, price, user_address, challenge);
 };
 
 

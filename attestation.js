@@ -12,7 +12,6 @@ const { createOAuthAppAuth } = require("@octokit/auth-oauth-app");
 const crypto = require('crypto');
 const express = require('express');
 const bodyParser = require('body-parser');
-const cookieParser = require('cookie-parser');
 const request = require('request');
 const path = require('path');
 const util = require('util');
@@ -38,7 +37,7 @@ function startWebServer(){
 	const app = express();
 	const server = require('http').Server(app);
 
-	app.use(cookieParser());
+	app.use(express.static(__dirname + '/public'));
 	app.use(bodyParser.urlencoded({ extended: false }));
 
 	// view engine setup
