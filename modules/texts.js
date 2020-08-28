@@ -71,7 +71,7 @@ exports.pleasePay = (receivingAddress, price, user_address, challenge) => {
 };
 
 exports.pleasePayOrPrivacy = (receivingAddress, price, user_address, challenge, postPublicly) => {
-	return (postPublicly === null) ? exports.privateOrPublic() : exports.pleasePay(pairingProtocol, receivingAddress, price, user_address, challenge);
+	return (postPublicly === null) ? exports.privateOrPublic() : exports.pleasePay(receivingAddress, price, user_address, challenge);
 };
 
 
