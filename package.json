@@ -14,5 +14,8 @@
 		"obyte-witness": "git+https://github.com/byteball/obyte-witness.git",
 		"ocore": "git+https://github.com/byteball/ocore.git",
 		"request": "2.83.0"
+	},
+	"resolutions": {
+		"level-rocksdb": "^4.0.0"
 	}
 }
