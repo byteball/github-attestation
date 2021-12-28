@@ -1,5 +1,7 @@
 .idea
 .npm
 node_modules
+testdata
+yarn.lock
 package-lock.json
 .env

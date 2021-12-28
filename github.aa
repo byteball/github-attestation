@@ -1,0 +1,69 @@
+{
+	doc_url: "https://devid.org/github.json",
+	getters: `{
+		$username2address = ($github_username) => var['u2a_'||$github_username];
+		$address2username = ($address) => var['a2u_'||$address];
+	}`,
+	init: `{
+		$overwrite_delay = 3; // in days
+
+	//	$attestor = 'OYW2XTDKSNKGSEZ27LMGNOPJSYIXHBHC'; // mainnet
+	//	$attestor = 'QBIAZQZWO3YK2I2C3X37DCVY643S4NI4'; // testnet
+		$attestor = 'QMWQRJV6NCYGUI6X7BWRKLLBQVQYLZ27'; // testkit tests
+
+		require(trigger.address == $attestor, "only the attestor can call this AA");
+	}`,
+	messages: {
+		cases: [
+
+			// add a new mapping
+			{
+				if: `{trigger.data.address AND trigger.data.github_username}`,
+				messages: [
+					{
+						app: 'state',
+						state: `{
+							$address = trigger.data.address;
+							$github_username = trigger.data.github_username;
+							require(is_valid_address($address), "address not valid");
+							require(has_only($github_username, '\w-'), "github username not valid");
+
+							$existing_owner = var['u2a_'||$github_username];
+							if ($existing_owner){ // would overwrite
+								require($existing_owner != $address, "the same owner");
+								$pending_varname = 'pending_'||$address||'_'||$github_username;
+								$pending_ts = var[$pending_varname];
+								if (!$pending_ts){
+									var[$pending_varname] = timestamp;
+									response['message'] = "This attestation would overwrite an existing record and can't be activated immediately for security reasons. Please repeat your attestation in "||$overwrite_delay||" days to activate the new owner of this github username.";
+									return;
+								}
+								require(timestamp > $pending_ts + $overwrite_delay * 24 * 3600, "the delay period is still ongoing");
+								var[$pending_varname] = false;
+								// the old a2u stays intact
+							}
+							var['u2a_'||$github_username] = $address;
+							var['a2u_'||$address] = $github_username;
+							response['message'] = $github_username||' => '||$address;
+						}`
+					}
+				]
+			},
+
+			// withdraw the bounce fees
+			{
+				if: `{trigger.data.withdraw AND trigger.data.amount}`,
+				messages: [
+					{
+						app: 'payment',
+						payload: {
+							asset: 'base',
+							outputs: [{address: `{$attestor}`, amount: `{trigger.data.amount}`}]
+						}
+					}
+				]
+			},
+
+		]
+	}
+}

@@ -5,7 +5,15 @@
 	"main": "attestation.js",
 	"repository": "https://github.com/byteball/github-attestation.git",
 	"license": "MIT",
+	"scripts": {
+		"test": "mocha --opts test/mocha.opts --require test/bootload.js",
+		"test:all": "mocha --opts test/mocha.opts --require test/bootload.js test/*.test.oscript.js",
+		"lint": "node ./node_modules/.bin/eslint --ext .js --max-warnings=0 test"
+	},
 	"dependencies": {
+		"chai": "^4.2.0",
+		"mocha": "^6.2.0",
+		"aa-testkit": "valyakin/aa-testkit",
 		"@octokit/auth-oauth-app": "3.0.5",
 		"body-parser": "1.18.3",
 		"ejs": "3.1.3",

@@ -110,15 +110,26 @@ function postAttestation(attestor_address, payload, onDone) {
 	let network = require('ocore/network.js');
 	let composer = require('ocore/composer.js');
 	let headlessWallet = require('headless-obyte');
-	let objMessage = {
+	let messages = [{
 		app: "attestation",
 		payload: payload
-	};
+	}];
+	let outputs = [{ address: attestor_address, amount: 0 }];
+	if (payload.profile.github_username) { // public attestation
+		messages.push({
+			app: "data",
+			payload: {
+				address: payload.address,
+				github_username: payload.profile.github_username,
+			}
+		});
+		outputs.push({ address: conf.attestation_aa, amount: 1e4 });
+	}
 
 	let params = {
 		paying_addresses: [attestor_address],
-		outputs: [{address: attestor_address, amount: 0}],
-		messages: [objMessage],
+		outputs,
+		messages,
 		signer: headlessWallet.signer,
 		callbacks: composer.getSavingCallbacks({
 			ifNotEnoughFunds: onError,

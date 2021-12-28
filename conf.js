@@ -43,6 +43,7 @@ exports.priceInBytes = 49000;
 exports.bAllowProofByPayment = false;
 exports.bAcceptUnconfirmedPayments = true;
 exports.fetchOrganizations = true;
+exports.attestation_aa = process.env.testnet ? 'HZENJOEOLEBRGKQYJBGGIJNLX7RAAVSH' : 'NPTNZFOTBQ7DVTR4OVV7SEMBNYFP2ZZS';
 
 exports.site = 'https://devid.org';
 
