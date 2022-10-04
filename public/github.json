@@ -1,0 +1,12 @@
+{
+	"version": "1.0",
+	"description": "Github attestor AA.",
+	"homepage_url": "https://devid.org",
+	"source_url": "https://github.com/byteball/github-attestation",
+	"field_descriptions": {
+		"address": "Address to attest",
+		"github_username": "Github username to attest",
+		"withdraw": "Withdraw funds",
+		"amount": "Amount to withdraw"
+	}
+}
