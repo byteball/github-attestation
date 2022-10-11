@@ -11,6 +11,7 @@ const notifications = require('./modules/notifications');
 const { createOAuthAppAuth } = require("@octokit/auth-oauth-app");
 const crypto = require('crypto');
 const express = require('express');
+const cors = require('cors')
 const bodyParser = require('body-parser');
 const request = require('request');
 const path = require('path');
@@ -35,6 +36,7 @@ function getLoginRedirectURL(state, fetchOrganizations) {
 
 function startWebServer(){
 	const app = express();
+	app.use(cors());
 	const server = require('http').Server(app);
 
 	app.use(express.static(__dirname + '/public'));
