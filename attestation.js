@@ -143,11 +143,11 @@ function startWebServer(){
 		userInfo.github_id = meResult.body.node_id;
 		userInfo.github_username = meResult.body.login;
 		userInfo.github_options = attest_options;
-		await db.query("UPDATE users SET github_id = ?, github_username = ?, github_options = ?, unique_id = ? WHERE device_address = ?", [
+		await db.query("UPDATE users SET github_id = ?, github_username = ?, github_options = ? WHERE device_address = ?", [
 			userInfo.github_id,
 			userInfo.github_username,
 			JSON.stringify(attest_options),
-			'', // reset once used
+		//	'', // reset once used
 			userInfo.device_address
 		]);
 		readOrAssignReceivingAddress(userInfo, (receiving_address, post_publicly) => {
