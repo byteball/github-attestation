@@ -49,10 +49,10 @@
 		<% for(var k in arrAttestations) {%>
 		<tr>
 			<td class="monospace">
-				<a href="https://<%= process.env.testnet ? 'testnet' : '' %>explorer.obyte.org/#<%= arrAttestations[k].attestation_unit %>" target="_blank"><%= arrAttestations[k].attestation_unit %></a>
+				<a href="https://<%= process.env.testnet ? 'testnet' : '' %>explorer.obyte.org/<%= arrAttestations[k].attestation_unit %>" target="_blank"><%= arrAttestations[k].attestation_unit %></a>
 			</td>
 			<td class="monospace">
-				<a href="https://<%= process.env.testnet ? 'testnet' : '' %>explorer.obyte.org/#<%= arrAttestations[k].user_address %>" target="_blank"><%= arrAttestations[k].user_address %></a>
+				<a href="https://<%= process.env.testnet ? 'testnet' : '' %>explorer.obyte.org/address/<%= arrAttestations[k].user_address %>" target="_blank"><%= arrAttestations[k].user_address %></a>
 				<a href="<%= pairingProtocol + arrAttestations[k].user_address %>" title="Donate"><span class="glyphicon glyphicon-send"></span></a>
 			</td>
 			<td><%= atob(arrAttestations[k].github_id).includes('Organization') ? 'Organization' : 'User' %></td>

@@ -72,7 +72,7 @@ function postAndWriteAttestation(transaction_id, attestor_address, attestation_p
 						[unit, transaction_id],
 						() => {
 							let device = require('ocore/device.js');
-							let explorer = (process.env.testnet ? 'https://testnetexplorer.obyte.org/#' : 'https://explorer.obyte.org/#');
+							let explorer = (process.env.testnet ? 'https://testnetexplorer.obyte.org/' : 'https://explorer.obyte.org/');
 							let text = "Now your GitHub username is attested, see the attestation unit: "+ explorer + unit;
 
 							if (src_profile) {
